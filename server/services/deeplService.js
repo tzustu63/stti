@@ -1,21 +1,22 @@
-const axios = require('axios');
+const axios = require("axios");
+require("dotenv").config();
 
 class DeepLService {
   constructor() {
     this.apiKey = process.env.DEEPL_API_KEY;
-    this.baseURL = 'https://api-free.deepl.com/v2'; // 使用免費版本，付費版本請改用 api.deepl.com
-    
+    this.baseURL = "https://api.deepl.com/v2"; // 使用付費版本
+
     // 支援的語言對應
     this.languageMap = {
-      'zh': 'ZH',
-      'en': 'EN',
-      'id': 'ID',
-      'vi': 'VI',
-      'th': 'TH',
-      'pt': 'PT',
-      'es': 'ES',
-      'ja': 'JA',
-      'ko': 'KO'
+      zh: "ZH",
+      en: "EN",
+      id: "ID",
+      vi: "VI",
+      th: "TH",
+      pt: "PT",
+      es: "ES",
+      ja: "JA",
+      ko: "KO",
     };
   }
 
@@ -29,7 +30,7 @@ class DeepLService {
   async translate(text, targetLang, sourceLang = null) {
     try {
       if (!text || !text.trim()) {
-        throw new Error('翻譯文字不能為空');
+        throw new Error("翻譯文字不能為空");
       }
 
       const targetLanguageCode = this.languageMap[targetLang];
@@ -38,9 +39,8 @@ class DeepLService {
       }
 
       const params = {
-        auth_key: this.apiKey,
         text: text.trim(),
-        target_lang: targetLanguageCode
+        target_lang: targetLanguageCode,
       };
 
       // 如果指定了來源語言，加入參數
@@ -54,34 +54,38 @@ class DeepLService {
       const response = await axios.post(`${this.baseURL}/translate`, null, {
         params: params,
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `DeepL-Auth-Key ${this.apiKey}`,
+        },
       });
 
-      if (response.data && response.data.translations && response.data.translations.length > 0) {
+      if (
+        response.data &&
+        response.data.translations &&
+        response.data.translations.length > 0
+      ) {
         const translation = response.data.translations[0];
-        
+
         return {
           success: true,
           originalText: text,
           translatedText: translation.text,
           detectedLanguage: translation.detected_source_language,
           targetLanguage: targetLang,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       } else {
-        throw new Error('翻譯 API 回應格式錯誤');
+        throw new Error("翻譯 API 回應格式錯誤");
       }
-
     } catch (error) {
-      console.error('DeepL 翻譯失敗:', error.response?.data || error.message);
-      
+      console.error("DeepL 翻譯失敗:", error.response?.data || error.message);
+
       return {
         success: false,
         error: error.response?.data || error.message,
         originalText: text,
         translatedText: null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -96,7 +100,7 @@ class DeepLService {
   async translateBatch(texts, targetLang, sourceLang = null) {
     try {
       if (!Array.isArray(texts) || texts.length === 0) {
-        throw new Error('翻譯文字陣列不能為空');
+        throw new Error("翻譯文字陣列不能為空");
       }
 
       const targetLanguageCode = this.languageMap[targetLang];
@@ -105,8 +109,7 @@ class DeepLService {
       }
 
       const params = {
-        auth_key: this.apiKey,
-        target_lang: targetLanguageCode
+        target_lang: targetLanguageCode,
       };
 
       // 如果指定了來源語言，加入參數
@@ -125,8 +128,9 @@ class DeepLService {
       const response = await axios.post(`${this.baseURL}/translate`, null, {
         params: params,
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `DeepL-Auth-Key ${this.apiKey}`,
+        },
       });
 
       if (response.data && response.data.translations) {
@@ -136,21 +140,23 @@ class DeepLService {
           translatedText: translation.text,
           detectedLanguage: translation.detected_source_language,
           targetLanguage: targetLang,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         }));
       } else {
-        throw new Error('批量翻譯 API 回應格式錯誤');
+        throw new Error("批量翻譯 API 回應格式錯誤");
       }
-
     } catch (error) {
-      console.error('DeepL 批量翻譯失敗:', error.response?.data || error.message);
-      
-      return texts.map(text => ({
+      console.error(
+        "DeepL 批量翻譯失敗:",
+        error.response?.data || error.message
+      );
+
+      return texts.map((text) => ({
         success: false,
         error: error.response?.data || error.message,
         originalText: text,
         translatedText: null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       }));
     }
   }
@@ -162,14 +168,17 @@ class DeepLService {
   async validateApiKey() {
     try {
       const response = await axios.get(`${this.baseURL}/usage`, {
-        params: {
-          auth_key: this.apiKey
-        }
+        headers: {
+          Authorization: `DeepL-Auth-Key ${this.apiKey}`,
+        },
       });
 
       return response.status === 200;
     } catch (error) {
-      console.error('DeepL API 金鑰驗證失敗:', error.response?.data || error.message);
+      console.error(
+        "DeepL API 金鑰驗證失敗:",
+        error.response?.data || error.message
+      );
       return false;
     }
   }
@@ -181,14 +190,17 @@ class DeepLService {
   async getUsageInfo() {
     try {
       const response = await axios.get(`${this.baseURL}/usage`, {
-        params: {
-          auth_key: this.apiKey
-        }
+        headers: {
+          Authorization: `DeepL-Auth-Key ${this.apiKey}`,
+        },
       });
 
       return response.data;
     } catch (error) {
-      console.error('取得 DeepL 使用量資訊失敗:', error.response?.data || error.message);
+      console.error(
+        "取得 DeepL 使用量資訊失敗:",
+        error.response?.data || error.message
+      );
       throw error;
     }
   }
@@ -201,14 +213,19 @@ class DeepLService {
     try {
       const response = await axios.get(`${this.baseURL}/languages`, {
         params: {
-          auth_key: this.apiKey,
-          type: 'target'
-        }
+          type: "target",
+        },
+        headers: {
+          Authorization: `DeepL-Auth-Key ${this.apiKey}`,
+        },
       });
 
       return response.data;
     } catch (error) {
-      console.error('取得 DeepL 支援語言清單失敗:', error.response?.data || error.message);
+      console.error(
+        "取得 DeepL 支援語言清單失敗:",
+        error.response?.data || error.message
+      );
       throw error;
     }
   }

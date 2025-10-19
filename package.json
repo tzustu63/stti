@@ -1,6 +1,6 @@
 {
   "name": "stti-realtime-interpreter",
-  "version": "1.0.0",
+  "version": "6.0.0",
   "description": "Real-time interpreter web application with GLADIA ASR and DeepL translation",
   "main": "server/index.js",
   "scripts": {

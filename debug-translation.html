@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>翻譯功能調試</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .log {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 3px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .start {
+        background: #4caf50;
+        color: white;
+      }
+      .stop {
+        background: #f44336;
+        color: white;
+      }
+      .test {
+        background: #2196f3;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>翻譯功能調試工具</h1>
+
+    <div class="section">
+      <h2>WebSocket 連線狀態</h2>
+      <div id="connection-status">未連線</div>
+      <button onclick="connectWebSocket()">連線</button>
+      <button onclick="disconnectWebSocket()">斷線</button>
+    </div>
+
+    <div class="section">
+      <h2>語言設定</h2>
+      <label
+        >來源語言:
+        <select id="sourceLang">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <label
+        >目標語言:
+        <select id="targetLang">
+          <option value="en">English</option>
+          <option value="zh">中文</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="section">
+      <h2>測試功能</h2>
+      <button class="test" onclick="testTranslation()">測試翻譯</button>
+      <button class="start" onclick="startRecording()">開始錄音</button>
+      <button class="stop" onclick="stopRecording()">停止錄音</button>
+    </div>
+
+    <div class="section">
+      <h2>原文逐字稿</h2>
+      <div
+        id="original-text"
+        style="
+          min-height: 100px;
+          border: 1px solid #ccc;
+          padding: 10px;
+          background: #f9f9f9;
+        "
+      >
+        等待語音輸入...
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>翻譯結果</h2>
+      <div
+        id="translated-text"
+        style="
+          min-height: 100px;
+          border: 1px solid #ccc;
+          padding: 10px;
+          background: #f9f9f9;
+        "
+      >
+        等待翻譯結果...
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>日誌</h2>
+      <div id="log" class="log"></div>
+      <button onclick="clearLog()">清除日誌</button>
+    </div>
+
+    <script>
+      let ws = null;
+      let isRecording = false;
+      let audioContext = null;
+      let processor = null;
+      let source = null;
+      let stream = null;
+
+      function log(message) {
+        const logDiv = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      function clearLog() {
+        document.getElementById("log").innerHTML = "";
+      }
+
+      function connectWebSocket() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          log("WebSocket 已經連線");
+          return;
+        }
+
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.hostname}:3000`;
+
+        log(`嘗試連接到: ${wsUrl}`);
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          log("✅ WebSocket 連線已建立");
+          document.getElementById("connection-status").textContent = "已連線";
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            log(`📥 收到訊息: ${JSON.stringify(data, null, 2)}`);
+
+            switch (data.type) {
+              case "transcript":
+                if (data.data.is_final) {
+                  log(`📝 收到最終逐字稿: ${data.data.utterance.text}`);
+                  document.getElementById("original-text").textContent =
+                    data.data.utterance.text;
+                }
+                break;
+              case "translation":
+                log(`🌐 收到翻譯: ${data.data.translated_utterance.text}`);
+                document.getElementById("translated-text").textContent =
+                  data.data.translated_utterance.text;
+                break;
+              case "recording_started":
+                log("🎤 錄音已開始");
+                break;
+              case "recording_stopped":
+                log("🛑 錄音已停止");
+                break;
+              case "error":
+                log(`❌ 錯誤: ${data.message}`);
+                break;
+              case "translation_error":
+                log(`❌ 翻譯錯誤: ${data.error}`);
+                break;
+            }
+          } catch (error) {
+            log(`❌ 解析訊息失敗: ${error.message}`);
+          }
+        };
+
+        ws.onclose = (event) => {
+          log(`🔌 WebSocket 連線已關閉: ${event.code} ${event.reason}`);
+          document.getElementById("connection-status").textContent = "未連線";
+        };
+
+        ws.onerror = (error) => {
+          log(`❌ WebSocket 錯誤: ${error}`);
+        };
+      }
+
+      function disconnectWebSocket() {
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
+      }
+
+      function testTranslation() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          log("❌ WebSocket 未連線");
+          return;
+        }
+
+        log("🧪 發送測試配置...");
+        ws.send(
+          JSON.stringify({
+            type: "config",
+            sourceLang: document.getElementById("sourceLang").value,
+            targetLang: document.getElementById("targetLang").value,
+          })
+        );
+      }
+
+      async function startRecording() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          log("❌ WebSocket 未連線");
+          return;
+        }
+
+        if (isRecording) {
+          log("⚠️ 已經在錄音中");
+          return;
+        }
+
+        try {
+          log("🎤 請求麥克風權限...");
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              sampleRate: 16000,
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+
+          log("✅ 麥克風權限已獲得");
+
+          // 發送配置訊息
+          ws.send(
+            JSON.stringify({
+              type: "config",
+              sourceLang: document.getElementById("sourceLang").value,
+              targetLang: document.getElementById("targetLang").value,
+            })
+          );
+
+          // 創建 AudioContext
+          audioContext = new (window.AudioContext || window.webkitAudioContext)(
+            {
+              sampleRate: 16000,
+            }
+          );
+
+          // 創建音訊源
+          source = audioContext.createMediaStreamSource(stream);
+
+          // 創建 ScriptProcessorNode
+          processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+          processor.onaudioprocess = (event) => {
+            if (!isRecording) return;
+
+            const inputBuffer = event.inputBuffer;
+            const inputData = inputBuffer.getChannelData(0);
+
+            // 轉換為 PCM 16-bit
+            const pcmData = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              pcmData[i] = Math.max(
+                -32768,
+                Math.min(32767, inputData[i] * 32768)
+              );
+            }
+
+            // 轉換為 base64
+            const base64Pcm = btoa(
+              String.fromCharCode(...new Uint8Array(pcmData.buffer))
+            );
+
+            // 發送到 WebSocket
+            ws.send(
+              JSON.stringify({
+                type: "audio_chunk",
+                data: { chunk: base64Pcm },
+              })
+            );
+          };
+
+          // 連接音訊節點
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+
+          isRecording = true;
+          log("🎤 開始錄音");
+        } catch (error) {
+          log(`❌ 無法開始錄音: ${error.message}`);
+        }
+      }
+
+      function stopRecording() {
+        if (!isRecording) {
+          log("⚠️ 沒有在錄音");
+          return;
+        }
+
+        isRecording = false;
+
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+          stream = null;
+        }
+
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+
+        if (processor) {
+          processor.disconnect();
+          processor = null;
+        }
+
+        if (source) {
+          source.disconnect();
+          source = null;
+        }
+
+        // 發送停止錄音訊息
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              type: "stop_recording",
+            })
+          );
+        }
+
+        log("🛑 停止錄音");
+      }
+
+      // 頁面載入時自動連線
+      window.onload = () => {
+        connectWebSocket();
+      };
+    </script>
+  </body>
+</html>

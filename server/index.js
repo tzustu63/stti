@@ -355,13 +355,24 @@ async function handleAudioData(clientId, message) {
 // 翻譯文字
 async function translateText(clientId, text, sourceLang, targetLang) {
   try {
+    console.log(
+      `🔄 開始翻譯 (${clientId}): "${text}" (${sourceLang} -> ${targetLang})`
+    );
     const session = clientSessions.get(clientId);
-    if (!session) return;
+    if (!session) {
+      console.log(`❌ 會話不存在 (${clientId})`);
+      return;
+    }
 
     const translationResult = await deeplService.translate(
       text,
       targetLang,
       sourceLang
+    );
+
+    console.log(
+      `📊 翻譯結果 (${clientId}):`,
+      JSON.stringify(translationResult, null, 2)
     );
 
     if (translationResult.success) {

@@ -1,6 +1,6 @@
 {
   "name": "stti-server",
-  "version": "1.0.0",
+  "version": "6.0.0",
   "description": "Backend server for real-time interpreter",
   "main": "index.js",
   "scripts": {
