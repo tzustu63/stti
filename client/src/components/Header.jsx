@@ -1,13 +1,13 @@
-import React from 'react'
-import { Settings, Wifi, WifiOff } from 'lucide-react'
-import LanguageSelector from './LanguageSelector'
+import React from "react";
+import { Wifi, WifiOff } from "lucide-react";
+import LanguageSelector from "./LanguageSelector";
 
-const Header = ({ 
-  inputLanguage, 
-  outputLanguage, 
-  onInputLanguageChange, 
+const Header = ({
+  inputLanguage,
+  outputLanguage,
+  onInputLanguageChange,
   onOutputLanguageChange,
-  isConnected 
+  isConnected,
 }) => {
   return (
     <header className="bg-white shadow-sm border-b">
@@ -25,13 +25,23 @@ const Header = ({
               value={inputLanguage}
               onChange={onInputLanguageChange}
             />
-            
+
             <div className="text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
               </svg>
             </div>
-            
+
             <LanguageSelector
               label="輸出語言"
               value={outputLanguage}
@@ -39,23 +49,18 @@ const Header = ({
             />
           </div>
 
-          {/* 設定和連線狀態 */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center">
-              {isConnected ? (
-                <Wifi className="w-5 h-5 text-green-500" />
-              ) : (
-                <WifiOff className="w-5 h-5 text-red-500" />
-              )}
-            </div>
-            <button className="p-2 text-gray-600 hover:text-gray-900">
-              <Settings className="w-5 h-5" />
-            </button>
+          {/* 連線狀態 */}
+          <div className="flex items-center">
+            {isConnected ? (
+              <Wifi className="w-5 h-5 text-green-500" />
+            ) : (
+              <WifiOff className="w-5 h-5 text-red-500" />
+            )}
           </div>
         </div>
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
