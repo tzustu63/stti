@@ -5,7 +5,6 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { useAudioRecorder } from "./hooks/useAudioRecorder";
 
 function App() {
-  const [isRecording, setIsRecording] = useState(false);
   const [inputLanguage, setInputLanguage] = useState("zh");
   const [outputLanguage, setOutputLanguage] = useState("en");
   const [originalText, setOriginalText] = useState("");
@@ -13,8 +12,10 @@ function App() {
   const [isPartial, setIsPartial] = useState(false);
 
   const { ws, isConnected } = useWebSocket();
-  const { startRecording, stopRecording, isRecordingAudio } =
-    useAudioRecorder(ws);
+  const { startRecording, stopRecording, isRecording } = useAudioRecorder(ws);
+
+  // 調試信息
+  console.log("App - isRecording:", isRecording);
 
   useEffect(() => {
     if (!ws) return;
@@ -31,10 +32,10 @@ function App() {
           setTranslatedText(data.data.translated_utterance.text);
           break;
         case "recording_started":
-          setIsRecording(true);
+          // 錄音狀態由 useAudioRecorder 管理
           break;
         case "recording_stopped":
-          setIsRecording(false);
+          // 錄音狀態由 useAudioRecorder 管理
           break;
       }
     };

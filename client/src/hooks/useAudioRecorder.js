@@ -19,6 +19,7 @@ export const useAudioRecorder = (ws) => {
 
       setHasPermission(true);
       setIsRecording(true);
+      console.log("useAudioRecorder - 設置 isRecording 為 true");
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: "audio/webm;codecs=opus",
@@ -53,6 +54,7 @@ export const useAudioRecorder = (ws) => {
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
         setIsRecording(false);
+        console.log("useAudioRecorder - 設置 isRecording 為 false");
       };
 
       mediaRecorder.start(1000); // 每秒發送一次資料
@@ -63,7 +65,8 @@ export const useAudioRecorder = (ws) => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current) {
+      console.log("停止錄音...");
       mediaRecorderRef.current.stop();
     }
   };
