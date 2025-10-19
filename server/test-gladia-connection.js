@@ -26,6 +26,19 @@ async function testGladiaConnection() {
         sample_rate: 16000,
         channels: 1,
         model: "solaria-1",
+        // 新增語言配置以提升辨識準確度
+        language_config: {
+          languages: ["zh"], // 明確指定語言
+          code_switching: false, // 禁用語碼切換以提升準確度
+        },
+        // 新增端點檢測參數以加快斷句速度
+        endpointing: 0.3, // 300ms 靜音視為句子結束（更快定稿）
+        maximum_duration_without_endpointing: 10, // 最長 10 秒強制斷句
+        // 新增音訊預處理以提升品質
+        pre_processing: {
+          audio_enhancer: true, // 啟用音訊增強
+          speech_threshold: 0.3, // 語音檢測閾值
+        },
         messages_config: {
           receive_partial_transcripts: true,
           receive_final_transcripts: true,

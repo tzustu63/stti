@@ -30,6 +30,16 @@ export const useAudioRecorder = (sendMessage) => {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            // 新增優化參數以提升音訊品質
+            latency: 0.01, // 最小延遲
+            googEchoCancellation: true,
+            googNoiseSuppression: true,
+            googAutoGainControl: true,
+            googHighpassFilter: true,
+            googTypingNoiseDetection: true,
+            googAudioMirroring: false,
+            googDAEchoCancellation: true,
+            googNoiseReduction: true,
           },
         });
 
@@ -50,9 +60,13 @@ export const useAudioRecorder = (sendMessage) => {
         const source = audioContext.createMediaStreamSource(stream);
         sourceRef.current = source;
 
-        // 創建 ScriptProcessorNode 來處理音訊資料
-        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+        // 創建 ScriptProcessorNode 來處理音訊資料 - 優化緩衝區大小以降低延遲
+        const processor = audioContext.createScriptProcessor(1024, 1, 1);
         processorRef.current = processor;
+
+        // 音訊緩衝機制 - 累積音訊資料以提高處理效率
+        let audioBuffer = [];
+        const BUFFER_SIZE = 2048; // 累積到 2048 samples 再發送 (約 128ms)
 
         processor.onaudioprocess = (event) => {
           if (!isRecordingRef.current) return;
@@ -60,27 +74,35 @@ export const useAudioRecorder = (sendMessage) => {
           const inputBuffer = event.inputBuffer;
           const inputData = inputBuffer.getChannelData(0);
 
-          // 將 Float32Array 轉換為 Int16Array (PCM 16-bit)
-          const pcmData = new Int16Array(inputData.length);
-          for (let i = 0; i < inputData.length; i++) {
-            pcmData[i] = Math.max(
-              -32768,
-              Math.min(32767, inputData[i] * 32768)
+          // 累積音訊資料到緩衝區
+          audioBuffer.push(...inputData);
+
+          // 當緩衝區達到指定大小時才發送
+          if (audioBuffer.length >= BUFFER_SIZE) {
+            const chunk = audioBuffer.splice(0, BUFFER_SIZE);
+            
+            // 將 Float32Array 轉換為 Int16Array (PCM 16-bit)
+            const pcmData = new Int16Array(chunk.length);
+            for (let i = 0; i < chunk.length; i++) {
+              pcmData[i] = Math.max(
+                -32768,
+                Math.min(32767, chunk[i] * 32768)
+              );
+            }
+
+            // 轉換為 base64
+            const base64Pcm = btoa(
+              String.fromCharCode(...new Uint8Array(pcmData.buffer))
             );
-          }
 
-          // 轉換為 base64
-          const base64Pcm = btoa(
-            String.fromCharCode(...new Uint8Array(pcmData.buffer))
-          );
-
-          // 發送到 WebSocket
-          if (sendMessage) {
-            sendMessage({
-              type: "audio_chunk",
-              data: { chunk: base64Pcm },
-            });
-            console.log("PCM 音訊資料已發送:", pcmData.length, "samples");
+            // 發送到 WebSocket
+            if (sendMessage) {
+              sendMessage({
+                type: "audio_chunk",
+                data: { chunk: base64Pcm },
+              });
+              console.log("PCM 音訊資料已發送:", pcmData.length, "samples");
+            }
           }
         };
 

@@ -219,7 +219,7 @@
             })
           );
 
-          // 獲取麥克風權限
+          // 獲取麥克風權限 - 優化音訊品質設定
           stream = await navigator.mediaDevices.getUserMedia({
             audio: {
               sampleRate: 16000,
@@ -227,6 +227,16 @@
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true,
+              // 新增優化參數以提升音訊品質
+              latency: 0.01, // 最小延遲
+              googEchoCancellation: true,
+              googNoiseSuppression: true,
+              googAutoGainControl: true,
+              googHighpassFilter: true,
+              googTypingNoiseDetection: true,
+              googAudioMirroring: false,
+              googDAEchoCancellation: true,
+              googNoiseReduction: true,
             },
           });
 
