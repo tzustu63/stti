@@ -4,17 +4,41 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .partial-text {
-  @apply text-gray-600 italic;
+  @apply text-gray-600 italic border-l-4 border-yellow-400 pl-3;
+  animation: pulse 2s infinite;
 }
 
 .final-text {
-  @apply text-black font-medium;
+  @apply text-black font-medium border-l-4 border-green-500 pl-3;
+  /* 移除動畫，因為只顯示最終結果 */
+}
+
+/* 改善文字顯示效果 */
+.transcript-content {
+  line-height: 1.8;
+  word-spacing: 0.1em;
+  letter-spacing: 0.02em;
+}
+
+/* 響應式文字大小 */
+@media (max-width: 640px) {
+  .transcript-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+}
+
+@media (min-width: 1024px) {
+  .transcript-content {
+    font-size: 1.1rem;
+    line-height: 1.9;
+  }
 }

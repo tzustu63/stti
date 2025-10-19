@@ -6,6 +6,7 @@ const MainArea = ({
   translatedText,
   isPartial,
   isRecording,
+  errorMessage,
   onStartRecording,
   onStopRecording,
 }) => {
@@ -14,12 +15,12 @@ const MainArea = ({
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-96">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 min-h-[600px]">
         {/* 原文逐字稿區域 */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 h-full flex flex-col">
+        <div className="bg-white rounded-lg shadow-sm border flex flex-col">
+          <div className="p-4 sm:p-6 flex flex-col flex-1">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                 原文逐字稿
               </h2>
               <div className="flex items-center space-x-2">
@@ -32,18 +33,20 @@ const MainArea = ({
               </div>
             </div>
 
-            <div className="flex-1 bg-gray-50 rounded-md p-4 overflow-y-auto">
-              <div className="min-h-full flex items-start">
+            <div className="flex-1 bg-gray-50 rounded-md p-4 sm:p-6 overflow-y-auto min-h-[400px]">
+              <div className="min-h-full">
                 {originalText ? (
-                  <p
-                    className={`text-lg leading-relaxed ${
+                  <div
+                    className={`transcript-content whitespace-pre-wrap break-words ${
                       isPartial ? "partial-text" : "final-text"
                     }`}
                   >
                     {originalText}
-                  </p>
+                  </div>
                 ) : (
-                  <p className="text-gray-500 text-lg">等待語音輸入...</p>
+                  <p className="text-gray-500 text-base sm:text-lg">
+                    等待語音輸入...
+                  </p>
                 )}
               </div>
             </div>
@@ -51,26 +54,37 @@ const MainArea = ({
         </div>
 
         {/* 翻譯結果區域 */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 h-full flex flex-col">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-lg shadow-sm border flex flex-col">
+          <div className="p-4 sm:p-6 flex flex-col flex-1">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
               翻譯結果
             </h2>
 
-            <div className="flex-1 bg-gray-50 rounded-md p-4 overflow-y-auto">
-              <div className="min-h-full flex items-start">
+            <div className="flex-1 bg-gray-50 rounded-md p-4 sm:p-6 overflow-y-auto min-h-[400px]">
+              <div className="min-h-full">
                 {translatedText ? (
-                  <p className="text-lg leading-relaxed text-gray-900">
+                  <div className="transcript-content text-gray-900 whitespace-pre-wrap break-words">
                     {translatedText}
-                  </p>
+                  </div>
                 ) : (
-                  <p className="text-gray-500 text-lg">等待翻譯結果...</p>
+                  <p className="text-gray-500 text-base sm:text-lg">
+                    等待翻譯結果...
+                  </p>
                 )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* 錯誤訊息顯示 */}
+      {errorMessage && (
+        <div className="flex justify-center mt-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {errorMessage}
+          </div>
+        </div>
+      )}
 
       {/* 錄音控制按鈕 */}
       <div className="flex justify-center space-x-4 mt-8">

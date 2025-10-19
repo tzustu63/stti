@@ -37,6 +37,8 @@ const SUPPORTED_LANGUAGES = {
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../client/dist")));
+// 提供測試頁面
+app.use(express.static(path.join(__dirname, "..")));
 
 // 健康檢查端點
 app.get("/healthz", (req, res) => {
@@ -46,6 +48,11 @@ app.get("/healthz", (req, res) => {
 // API 端點
 app.get("/api/languages", (req, res) => {
   res.json(SUPPORTED_LANGUAGES);
+});
+
+// 測試頁面路由
+app.get("/test", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/test-audio.html"));
 });
 
 // WebSocket 連線處理
@@ -129,6 +136,77 @@ async function handleConfig(clientId, message) {
     session.gladiaSessionId = gladiaSessionId;
     session.isRecording = true;
 
+    // 設定 GLADIA WebSocket 訊息處理器
+    gladiaService.setMessageHandler(gladiaSessionId, (gladiaMessage) => {
+      console.log("收到 GLADIA 訊息:", JSON.stringify(gladiaMessage, null, 2));
+
+      // 處理轉錄結果
+      if (gladiaMessage.type === "transcript" && gladiaMessage.data) {
+        const transcriptData = gladiaMessage.data;
+        const utterance = transcriptData.utterance || {};
+        const isFinal = transcriptData.is_final || false;
+        const text = utterance.text || "";
+
+        console.log(`轉錄結果: "${text}" (${isFinal ? "最終" : "部分"})`);
+
+        // 只處理最終確認的轉錄結果，忽略部分轉錄
+        if (text && text.trim().length > 0 && isFinal) {
+          // 發送轉錄結果給客戶端
+          const transcriptResponse = {
+            type: "transcript",
+            data: {
+              is_final: isFinal,
+              utterance: {
+                text: text,
+                start: utterance.start || 0,
+                end: utterance.end || 0,
+                confidence: utterance.confidence || 0,
+                words: utterance.words || [],
+              },
+            },
+          };
+
+          console.log(
+            "發送最終轉錄結果給客戶端:",
+            JSON.stringify(transcriptResponse, null, 2)
+          );
+
+          try {
+            session.ws.send(JSON.stringify(transcriptResponse));
+          } catch (error) {
+            console.error("發送轉錄結果失敗:", error);
+          }
+
+          // 進行翻譯
+          translateText(
+            clientId,
+            text,
+            session.inputLanguage,
+            session.outputLanguage
+          );
+        } else if (text && text.trim().length > 0 && !isFinal) {
+          // 記錄部分轉錄但不發送給客戶端
+          console.log(`部分轉錄（不顯示）: "${text}"`);
+        }
+      } else if (gladiaMessage.type === "audio_chunk") {
+        // 音訊資料確認訊息，不需要處理
+        console.log("音訊資料已確認:", gladiaMessage.data);
+      } else if (gladiaMessage.type === "error") {
+        // 處理錯誤訊息
+        console.error("GLADIA 錯誤:", gladiaMessage.data);
+        session.ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "GLADIA 錯誤: " + (gladiaMessage.data?.message || "未知錯誤"),
+          })
+        );
+      } else {
+        // 其他類型的訊息
+        console.log("其他 GLADIA 訊息:", gladiaMessage.type, gladiaMessage);
+      }
+    });
+
     session.ws.send(
       JSON.stringify({
         type: "recording_started",
@@ -197,10 +275,12 @@ async function handleStopRecording(clientId) {
     const session = clientSessions.get(clientId);
     if (!session || !session.gladiaSessionId) return;
 
+    // 先設定為停止錄音狀態，避免繼續發送音訊
+    session.isRecording = false;
+
     // 結束 GLADIA 會話
     await gladiaService.endSession(session.gladiaSessionId);
     session.gladiaSessionId = null;
-    session.isRecording = false;
 
     session.ws.send(
       JSON.stringify({
@@ -228,45 +308,35 @@ async function handleStopRecording(clientId) {
 async function handleAudioData(clientId, message) {
   try {
     const session = clientSessions.get(clientId);
-    if (!session || !session.gladiaSessionId || !session.isRecording) return;
+    if (!session || !session.gladiaSessionId || !session.isRecording) {
+      console.log(`跳過音訊資料處理 (${clientId}): 會話不存在或未錄音`);
+      return;
+    }
 
-    // 將 base64 音訊資料轉換為 Buffer
-    const audioBuffer = Buffer.from(message.data.chunk, "base64");
+    // 將 base64 PCM 資料轉換為 Buffer
+    const pcmBuffer = Buffer.from(message.data.chunk, "base64");
 
-    // 發送到 GLADIA
-    const gladiaResponse = await gladiaService.sendAudioData(
-      session.gladiaSessionId,
-      audioBuffer
+    // 檢查 GLADIA WebSocket 連線狀態
+    const sessionStatus = gladiaService.getSessionStatus(
+      session.gladiaSessionId
     );
-    const asrResult = gladiaService.formatGladiaResponse(gladiaResponse);
+    if (!sessionStatus.exists || sessionStatus.wsReadyState !== 1) {
+      console.log(`GLADIA WebSocket 未連線 (${clientId}):`, sessionStatus);
+      return;
+    }
 
-    if (asrResult && asrResult.text) {
-      // 發送 ASR 結果
-      session.ws.send(
-        JSON.stringify({
-          type: "transcript",
-          data: {
-            is_final: asrResult.isFinal,
-            utterance: {
-              text: asrResult.text,
-              start: 0,
-              end: 0.48,
-              confidence: asrResult.confidence,
-              words: [],
-            },
-          },
-        })
+    // 發送 PCM 資料到 GLADIA WebSocket
+    const result = await gladiaService.sendAudioData(
+      session.gladiaSessionId,
+      pcmBuffer
+    );
+
+    if (result.success) {
+      console.log(
+        `PCM 音訊資料已處理 (${clientId}): ${pcmBuffer.length} bytes`
       );
-
-      // 如果是 final 結果，進行翻譯
-      if (asrResult.isFinal) {
-        await translateText(
-          clientId,
-          asrResult.text,
-          session.inputLanguage,
-          session.outputLanguage
-        );
-      }
+    } else {
+      console.warn(`音訊資料發送失敗 (${clientId}):`, result.error);
     }
   } catch (error) {
     console.error("處理音訊資料失敗:", error);
