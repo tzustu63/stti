@@ -42,3 +42,58 @@ body {
     line-height: 1.9;
   }
 }
+
+/* 文字對容器樣式 */
+.text-pair-container {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.text-pair-container:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.text-pair-item {
+  margin-bottom: 1rem;
+}
+
+.text-pair-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 單一顯示模式的滾動區域 */
+.single-mode-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* 確保新內容出現在頂部 */
+.text-pairs-container {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+/* 單一顯示模式的翻譯文字樣式 */
+.single-mode-translation {
+  font-size: 1.5rem;
+  line-height: 1.8;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+@media (min-width: 640px) {
+  .single-mode-translation {
+    font-size: 1.75rem;
+    line-height: 1.9;
+  }
+}
+
+@media (min-width: 1024px) {
+  .single-mode-translation {
+    font-size: 2rem;
+    line-height: 2;
+  }
+}

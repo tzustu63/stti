@@ -1,5 +1,5 @@
 import React from "react";
-import { Wifi, WifiOff } from "lucide-react";
+import { Wifi, WifiOff, Layout, LayoutGrid } from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
 
 const Header = ({
@@ -8,6 +8,8 @@ const Header = ({
   onInputLanguageChange,
   onOutputLanguageChange,
   isConnected,
+  displayMode,
+  onDisplayModeChange,
 }) => {
   return (
     <header className="bg-white shadow-sm border-b">
@@ -18,7 +20,7 @@ const Header = ({
             <h1 className="text-xl font-bold text-gray-900">即時口譯</h1>
           </div>
 
-          {/* 語言選擇器 */}
+          {/* 語言選擇器和顯示模式切換 */}
           <div className="flex items-center space-x-4">
             <LanguageSelector
               label="輸入語言"
@@ -47,6 +49,30 @@ const Header = ({
               value={outputLanguage}
               onChange={onOutputLanguageChange}
             />
+
+            {/* 顯示模式切換按鈕 */}
+            <div className="ml-4 pl-4 border-l border-gray-200">
+              <button
+                onClick={() =>
+                  onDisplayModeChange(
+                    displayMode === "split" ? "single" : "split"
+                  )
+                }
+                className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors duration-200"
+              >
+                {displayMode === "split" ? (
+                  <>
+                    <Layout className="w-4 h-4" />
+                    <span className="text-sm">單一顯示</span>
+                  </>
+                ) : (
+                  <>
+                    <LayoutGrid className="w-4 h-4" />
+                    <span className="text-sm">分割顯示</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* 連線狀態 */}

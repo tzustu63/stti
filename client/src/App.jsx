@@ -7,10 +7,13 @@ import { useAudioRecorder } from "./hooks/useAudioRecorder";
 function App() {
   const [inputLanguage, setInputLanguage] = useState("zh");
   const [outputLanguage, setOutputLanguage] = useState("en");
-  const [originalText, setOriginalText] = useState("");
-  const [translatedText, setTranslatedText] = useState("");
+  // 修改為陣列來存儲多組文字對
+  const [textPairs, setTextPairs] = useState([]);
+  const [currentOriginalText, setCurrentOriginalText] = useState("");
+  const [currentTranslatedText, setCurrentTranslatedText] = useState("");
   const [isPartial, setIsPartial] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [displayMode, setDisplayMode] = useState("split");
 
   const { ws, isConnected, sendMessage } = useWebSocket();
   const { startRecording, stopRecording, isRecording, isConfigured } =
@@ -38,7 +41,7 @@ function App() {
             // 只處理最終轉錄結果
             if (data.data.is_final) {
               console.log("收到最終逐字稿:", data.data.utterance.text);
-              setOriginalText(data.data.utterance.text);
+              setCurrentOriginalText(data.data.utterance.text);
               setIsPartial(false); // 始終為最終結果
               setErrorMessage(""); // 清除錯誤訊息
             } else {
@@ -47,7 +50,7 @@ function App() {
             break;
           case "translation":
             console.log("收到翻譯:", data.data.translated_utterance.text);
-            setTranslatedText(data.data.translated_utterance.text);
+            setCurrentTranslatedText(data.data.translated_utterance.text);
             break;
           case "recording_started":
             console.log("錄音已開始");
@@ -69,6 +72,25 @@ function App() {
       }
     };
   }, [ws]);
+
+  // 當翻譯完成時，將文字對添加到陣列中
+  useEffect(() => {
+    if (currentOriginalText && currentTranslatedText) {
+      setTextPairs((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          original: currentOriginalText,
+          translated: currentTranslatedText,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]); // 新文字對放在最後面
+
+      // 清空當前文字
+      setCurrentOriginalText("");
+      setCurrentTranslatedText("");
+    }
+  }, [currentOriginalText, currentTranslatedText]);
 
   const handleStartRecording = () => {
     if (!isConnected) {
@@ -92,13 +114,18 @@ function App() {
         onInputLanguageChange={setInputLanguage}
         onOutputLanguageChange={setOutputLanguage}
         isConnected={isConnected}
+        displayMode={displayMode}
+        onDisplayModeChange={setDisplayMode}
       />
       <MainArea
-        originalText={originalText}
-        translatedText={translatedText}
+        textPairs={textPairs}
+        currentOriginalText={currentOriginalText}
+        currentTranslatedText={currentTranslatedText}
         isPartial={isPartial}
         isRecording={isRecording}
         errorMessage={errorMessage}
+        displayMode={displayMode}
+        onDisplayModeChange={setDisplayMode}
         onStartRecording={handleStartRecording}
         onStopRecording={handleStopRecording}
       />
